@@ -14,9 +14,15 @@ ui <- fluidPage(
   
   sidebarLayout(
     sidebarPanel(
-      fileInput("holdings", "Step 1: upload your T&F holdings file", accept = ".csv"),
+      selectInput(
+        inputId = "platform",
+        label = "Step 1: select platform",
+        choices = c("T&F"),  # can expand later
+        selected = "T&F"
+      ),
+      fileInput("holdings", "Step 2: upload your holdings file", accept = ".csv"),
 
-      fileInput("file", "Step 2: upload the monthly usage report", accept = ".csv")
+      fileInput("file", "Step 3: upload the monthly usage report", accept = ".csv")
     ),
     
     mainPanel(

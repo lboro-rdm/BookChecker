@@ -19,8 +19,10 @@ server <- function(input, output, session) {
         isbn = str_replace_all(isbn, "[-\\s]", ""),
         isbn = str_trim(isbn)
       ) %>%
-      distinct(isbn, .keep_all = TRUE)  # 🧹 Deduplicate on ISBN
-    
+      pivot_wider(
+        names_from = metric_type,
+        values_from = reporting_period_total
+      )
     
     accessed_with_type <- df_accessed %>%
       left_join(df_main %>% select(isbn_e_isbn, content_type),
@@ -34,7 +36,13 @@ server <- function(input, output, session) {
     list(
       matched_counts = accessed_with_type %>%
         filter(!is.na(accessed_content_type)) %>%
-        count(accessed_content_type),
+        group_by(accessed_content_type) %>%
+        summarise(
+          row_count = n(),
+          total_item_requests = sum(Total_Item_Requests, na.rm = TRUE),
+          total_unique_title_requests = sum(Unique_Title_Requests, na.rm = TRUE),
+          .groups = "drop"
+        ),
       
       unmatched_accessed = accessed_with_type %>%
         filter(is.na(accessed_content_type)) %>%
