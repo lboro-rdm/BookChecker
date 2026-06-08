@@ -3,10 +3,23 @@ library(tidyverse)
 library(janitor)
 library(DT)
 library(dadjoke)
+library(bslib)
 
 
 ui <- fluidPage(
   titlePanel("Accessed Books Analysis"),
+  
+  theme = bs_theme(
+    version      = 5,
+    bg           = "#0f1117",
+    fg           = "#e8eaf0",
+    primary      = "#004C4C",
+    secondary    = "#66B2B2",
+    base_font    = font_google("Cherry Cream Soda"),
+    heading_font = font_google("Fontdiner Swanky"),
+    font_scale   = 0.92
+  ),
+  
   p("Here is today's dad joke for today:"),
   paste(capture.output(dadjoke::dadjoke()), collapse = "\n"),
   p(),
