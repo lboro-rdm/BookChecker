@@ -11,7 +11,7 @@ server <- function(input, output, session) {
         isbn_e_isbn = str_trim(isbn_e_isbn)
       ) %>%
       filter(!is.na(content_type) & content_type != "")
-
+    
     # Read and clean usage file
     df_accessed <- read_csv(input$file$datapath, skip = 13) %>%
       clean_names() %>%
@@ -31,7 +31,7 @@ server <- function(input, output, session) {
       mutate(accessed_content_type = recode(accessed_content_type,
                                             "p" = "Purchased",
                                             "s" = "Subscribed"))
-
+    
     # Output list
     list(
       matched_counts = accessed_with_type %>%
@@ -46,7 +46,8 @@ server <- function(input, output, session) {
       
       unmatched_accessed = accessed_with_type %>%
         filter(is.na(accessed_content_type)) %>%
-        select(title, isbn)
+        select(title, isbn, yop) %>% 
+        distinct(isbn, yop, .keep_all = TRUE)
     )
   })
   
@@ -59,4 +60,21 @@ server <- function(input, output, session) {
     req(df_processed())
     datatable(df_processed()$unmatched_accessed)
   })
+  
+  observe({
+    if (!is.null(df_processed()$unmatched_accessed)) {
+      shinyjs::enable("download_unmatched")
+    } else {
+      shinyjs::disable("download_unmatched")
+    }
+  })
+  
+  output$download_unmatched <- downloadHandler(
+    filename = function() {
+      paste0("unmatched_books_", Sys.Date(), ".csv")
+    },
+    content = function(file) {
+      write.csv(df_processed()$unmatched_accessed, file, row.names = FALSE)
+    }
+  )
 }
