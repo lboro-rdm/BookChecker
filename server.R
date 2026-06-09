@@ -3,17 +3,21 @@ server <- function(input, output, session) {
   df_processed <- reactive({
     req(input$holdings, input$file)
     
+    isbn_col <- if (input$platform == "Springer") "e_isbn" else "isbn_e_isbn"
+    
     # Read and clean holdings file
     df_main <- read_csv(input$holdings$datapath) %>%
       clean_names() %>%
       mutate(
-        isbn_e_isbn = str_replace_all(isbn_e_isbn, "[-\\s]", ""),
-        isbn_e_isbn = str_trim(isbn_e_isbn)
+        !!isbn_col := str_replace_all(.data[[isbn_col]], "[-\\s]", ""),
+        !!isbn_col := str_trim(.data[[isbn_col]])
       ) %>%
       filter(!is.na(content_type) & content_type != "")
     
+    skip_rows <- if (input$platform == "Springer") 15 else 13
+    
     # Read and clean usage file
-    df_accessed <- read_csv(input$file$datapath, skip = 13) %>%
+    df_accessed <- read_csv(input$file$datapath, skip = skip_rows) %>%
       clean_names() %>%
       mutate(
         isbn = str_replace_all(isbn, "[-\\s]", ""),
@@ -25,8 +29,8 @@ server <- function(input, output, session) {
       )
     
     accessed_with_type <- df_accessed %>%
-      left_join(df_main %>% select(isbn_e_isbn, content_type),
-                by = c("isbn" = "isbn_e_isbn")) %>%
+      left_join(df_main %>% select(all_of(isbn_col), content_type),
+                by = c("isbn" = isbn_col)) %>%
       rename(accessed_content_type = content_type) %>%
       mutate(accessed_content_type = recode(accessed_content_type,
                                             "p" = "Purchased",

@@ -32,7 +32,7 @@ ui <- fluidPage(
       selectInput(
         inputId = "platform",
         label = "Step 1: select platform",
-        choices = c("T&F"),  # can expand later
+        choices = c("T&F", "Springer"),
         selected = "T&F"
       ),
       fileInput("holdings", "Step 2: upload your holdings file", accept = ".csv"),
@@ -41,7 +41,7 @@ ui <- fluidPage(
       p("Wait for the unmatched table to populate before downloading. You have been warned."),
       downloadButton("download_unmatched", "Download Unmatched Books (.csv)",
                      disabled = "disabled")
-
+      
     ),
     
     mainPanel(
