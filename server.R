@@ -1,8 +1,16 @@
 server <- function(input, output, session) {
   
-  df_processed <- reactive({
+  files_ready <- reactiveVal(FALSE)
+
+  observeEvent(c(input$holdings, input$file), {
+    if (!is.null(input$holdings) && !is.null(input$file)) {
+      files_ready(TRUE)
+    }
+  })
+  
+  df_processed <- eventReactive(input$run, {
     req(input$holdings, input$file)
-    
+
     isbn_col <- if (input$platform == "Springer") "e_isbn" else "isbn_e_isbn"
     
     # Read and clean holdings file
@@ -75,7 +83,7 @@ server <- function(input, output, session) {
   
   output$download_unmatched <- downloadHandler(
     filename = function() {
-      paste0("unmatched_books_", Sys.Date(), ".csv")
+      paste0("unmatched_books_", input$platform, "_", Sys.Date(), ".csv")
     },
     content = function(file) {
       write.csv(df_processed()$unmatched_accessed, file, row.names = FALSE)

@@ -38,6 +38,8 @@ ui <- fluidPage(
       fileInput("holdings", "Step 2: upload your holdings file", accept = ".csv"),
       
       fileInput("file", "Step 3: upload the monthly usage report", accept = ".csv"),
+      actionButton("run", "Run Analysis"),
+      p(),
       p("Wait for the unmatched table to populate before downloading. You have been warned."),
       downloadButton("download_unmatched", "Download Unmatched Books (.csv)",
                      disabled = "disabled")
