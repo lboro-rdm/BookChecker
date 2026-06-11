@@ -32,8 +32,8 @@ ui <- fluidPage(
       selectInput(
         inputId = "platform",
         label = "Step 1: select platform",
-        choices = c("T&F", "Springer"),
-        selected = "T&F"
+        choices = c("EBC", "Springer", "T&F"),
+        selected = "EBC"
       ),
       fileInput("holdings", "Step 2: upload your holdings file", accept = ".csv"),
       

@@ -1,5 +1,7 @@
 server <- function(input, output, session) {
   
+  options(shiny.maxRequestSize = 30 * 1024^2)
+  
   files_ready <- reactiveVal(FALSE)
 
   observeEvent(c(input$holdings, input$file), {
@@ -11,7 +13,7 @@ server <- function(input, output, session) {
   df_processed <- eventReactive(input$run, {
     req(input$holdings, input$file)
 
-    isbn_col <- if (input$platform == "Springer") "e_isbn" else "isbn_e_isbn"
+    isbn_col <- if (input$platform == "Springer") "e_isbn" else if (input$platform == "EBC") "isbn" else "isbn_e_isbn"
     
     # Read and clean holdings file
     df_main <- read_csv(input$holdings$datapath) %>%
@@ -22,7 +24,7 @@ server <- function(input, output, session) {
       ) %>%
       filter(!is.na(content_type) & content_type != "")
     
-    skip_rows <- if (input$platform == "Springer") 15 else 13
+    skip_rows <- if (input$platform == "Springer") 15 else if (input$platform == "EBC") 14 else 13
     
     # Read and clean usage file
     df_accessed <- read_csv(input$file$datapath, skip = skip_rows) %>%
