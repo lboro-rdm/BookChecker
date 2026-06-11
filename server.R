@@ -13,7 +13,7 @@ server <- function(input, output, session) {
     req(input$holdings, input$file)
     
     # Holdings ISBN column name (after clean_names())
-    isbn_col <- if (input$platform == "Springer") "eisbn" else if (input$platform == "EBC") "eisbn" else "isbn_eisbn"
+    isbn_col <- if (input$platform == "Springer") "e_isbn" else if (input$platform == "EBC") "e_isbn" else "isbn_e_isbn"
     
     # Read and clean holdings file
     df_main <- read_csv(input$holdings$datapath) %>%
