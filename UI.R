@@ -32,12 +32,18 @@ ui <- fluidPage(
       selectInput(
         inputId = "platform",
         label = "Step 1: select platform",
-        choices = c("EBC", "Springer", "T&F"),
+        choices = c("EBC", "Springer", "T&F", "JUSP"),
         selected = "EBC"
       ),
       fileInput("holdings", "Step 2: upload your holdings file", accept = ".csv"),
       
       fileInput("file", "Step 3: upload the monthly usage report", accept = ".csv"),
+      selectInput(
+        inputId = "source",
+        label = "Step 4: select source of usage report",
+        choices = c("Publisher", "JUSP"),
+        selected = "JUSP"
+      ),
       actionButton("run", "Run Analysis"),
       p(),
       p("Wait for the unmatched table to populate before downloading. You have been warned."),

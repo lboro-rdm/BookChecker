@@ -3,7 +3,6 @@ server <- function(input, output, session) {
   options(shiny.maxRequestSize = 30 * 1024^2)
   
   files_ready <- reactiveVal(FALSE)
-
   observeEvent(c(input$holdings, input$file), {
     if (!is.null(input$holdings) && !is.null(input$file)) {
       files_ready(TRUE)
@@ -12,8 +11,9 @@ server <- function(input, output, session) {
   
   df_processed <- eventReactive(input$run, {
     req(input$holdings, input$file)
-
-    isbn_col <- if (input$platform == "Springer") "e_isbn" else if (input$platform == "EBC") "isbn" else "isbn_e_isbn"
+    
+    # Holdings ISBN column name (after clean_names())
+    isbn_col <- if (input$platform == "Springer") "eisbn" else if (input$platform == "EBC") "eisbn" else "isbn_eisbn"
     
     # Read and clean holdings file
     df_main <- read_csv(input$holdings$datapath) %>%
@@ -24,9 +24,9 @@ server <- function(input, output, session) {
       ) %>%
       filter(!is.na(content_type) & content_type != "")
     
-    skip_rows <- if (input$platform == "Springer") 15 else if (input$platform == "EBC") 14 else 13
+    skip_rows <- if (input$source == "JUSP") 15 else if (input$platform == "Springer") 15 else if (input$platform == "EBC") 14 else 13
     
-    # Read and clean usage file
+    # Read and clean usage file (ISBN column is always "isbn" in COUNTER reports)
     df_accessed <- read_csv(input$file$datapath, skip = skip_rows) %>%
       clean_names() %>%
       mutate(
@@ -60,7 +60,7 @@ server <- function(input, output, session) {
       
       unmatched_accessed = accessed_with_type %>%
         filter(is.na(accessed_content_type)) %>%
-        select(title, isbn, yop) %>% 
+        select(title, isbn, yop) %>%
         distinct(isbn, yop, .keep_all = TRUE)
     )
   })
