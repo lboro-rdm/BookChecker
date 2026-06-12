@@ -32,15 +32,20 @@ ui <- fluidPage(
       selectInput(
         inputId = "platform",
         label = "Step 1: select platform",
-        choices = c("EBC", "Springer", "T&F"),
+        choices = c("ACM", "ASCE", "BibliU", "Bloomsbury", "Bloomsbury Fashion", "EBC", "Springer", "T&F"),
         selected = "EBC"
       ),
       fileInput("holdings", "Step 2: upload your holdings file", accept = ".csv"),
-      
-      fileInput("file", "Step 3: upload the monthly usage report", accept = ".csv"),
+      selectizeInput("isbn_col", "Step 3: What is the ISBN column called? (eg for eISBN, select e_isbn).",
+                     choices  = c("e_isbn", "print_isbn", "isbn_e_isbn", "e_book_isbn", "isbn"),
+                     selected = NULL,
+                     multiple = TRUE,
+                     options  = list(maxItems = 2)
+      ),
+      fileInput("file", "Step 4: upload the monthly usage report", accept = ".csv"),
       selectInput(
         inputId = "source",
-        label = "Step 4: select source of usage report",
+        label = "Step 5: select source of usage report",
         choices = c("Publisher", "JUSP"),
         selected = "JUSP"
       ),

@@ -12,19 +12,25 @@ server <- function(input, output, session) {
   df_processed <- eventReactive(input$run, {
     req(input$holdings, input$file)
     
-    # Holdings ISBN column name (after clean_names())
-    isbn_col <- if (input$platform == "Springer") "e_isbn" else if (input$platform == "EBC") "e_isbn" else "isbn_e_isbn"
-    
     # Read and clean holdings file
     df_main <- read_csv(input$holdings$datapath) %>%
       clean_names() %>%
       mutate(
-        !!isbn_col := str_replace_all(.data[[isbn_col]], "[-\\s]", ""),
-        !!isbn_col := str_trim(.data[[isbn_col]])
+        !!input$isbn_col := str_replace_all(.data[[input$isbn_col]], "[-\\s]", ""),
+        !!input$isbn_col := str_trim(.data[[input$isbn_col]])
       ) %>%
       filter(!is.na(content_type) & content_type != "")
     
-    skip_rows <- if (input$source == "JUSP") 15 else if (input$platform == "Springer") 15 else if (input$platform == "EBC") 14 else 13
+    skip_rows <- dplyr::case_when(
+      input$source   == "JUSP"    ~ 15,
+      input$platform == "ASCE" ~ 14,
+      input$platform == "BibliU" ~ 14,
+      input$platform == "Bloomsbury" ~ 14,
+      input$platform == "Bloomsbury Fashion" ~ 14,
+      input$platform == "EBC"      ~ 14,
+      input$platform == "Springer" ~ 15,
+      .default = 14
+    )
     
     # Read and clean usage file (ISBN column is always "isbn" in COUNTER reports)
     df_accessed <- read_csv(input$file$datapath, skip = skip_rows) %>%
@@ -39,8 +45,8 @@ server <- function(input, output, session) {
       )
     
     accessed_with_type <- df_accessed %>%
-      left_join(df_main %>% select(all_of(isbn_col), content_type),
-                by = c("isbn" = isbn_col)) %>%
+      left_join(df_main %>% select(all_of(input$isbn_col), content_type),
+                by = c("isbn" = input$isbn_col)) %>%
       rename(accessed_content_type = content_type) %>%
       mutate(accessed_content_type = recode(accessed_content_type,
                                             "p" = "Purchased",
