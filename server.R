@@ -13,12 +13,11 @@ server <- function(input, output, session) {
     req(input$holdings, input$file)
     
     # Read and clean holdings file
-    df_main <- read_csv(input$holdings$datapath) %>%
+    df_main <- read_csv(input$holdings$datapath,
+                        col_types = cols(.default = col_character())) %>%
       clean_names() %>%
-      mutate(
-        !!input$isbn_col := str_replace_all(.data[[input$isbn_col]], "[-\\s]", ""),
-        !!input$isbn_col := str_trim(.data[[input$isbn_col]])
-      ) %>%
+      mutate(across(all_of(input$isbn_col),
+                    ~ str_trim(str_replace_all(., "[-\\s]", "")))) %>%
       filter(!is.na(content_type) & content_type != "")
     
     skip_rows <- dplyr::case_when(
@@ -44,11 +43,21 @@ server <- function(input, output, session) {
         values_from = reporting_period_total
       )
     
+    isbn_lookup <- bind_rows(
+      lapply(seq_along(input$isbn_col), function(i) {
+        df_main %>%
+          filter(!is.na(.data[[input$isbn_col[i]]]) & .data[[input$isbn_col[i]]] != "") %>%
+          select(content_type, isbn = all_of(input$isbn_col[i])) %>%
+          mutate(priority = i)
+      })
+    )
+    
     accessed_with_type <- df_accessed %>%
-      left_join(df_main %>% select(all_of(input$isbn_col), content_type),
-                by = c("isbn" = input$isbn_col)) %>%
-      rename(accessed_content_type = content_type) %>%
-      mutate(accessed_content_type = recode(accessed_content_type,
+      left_join(isbn_lookup, by = "isbn") %>%
+      group_by(isbn) %>%
+      slice_min(priority, n = 1, with_ties = FALSE) %>%
+      ungroup() %>%
+      mutate(accessed_content_type = recode(content_type,
                                             "p" = "Purchased",
                                             "s" = "Subscribed"))
     
