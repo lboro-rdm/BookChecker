@@ -26,6 +26,11 @@ server <- function(input, output, session) {
       input$platform == "BibliU" ~ 14,
       input$platform == "Bloomsbury" ~ 14,
       input$platform == "Bloomsbury Fashion" ~ 14,
+      input$platform == "Brill" ~ 14,
+      input$platform == "Cambridge" ~ 14,
+      input$platform == "De Gruyter" ~ 14,
+      input$platform == "Drama Online" ~ 14,
+      input$platform == "Duke Uni Press" ~ 14,
       input$platform == "EBC"      ~ 14,
       input$platform == "Springer" ~ 15,
       .default = 14
@@ -59,7 +64,8 @@ server <- function(input, output, session) {
       ungroup() %>%
       mutate(accessed_content_type = recode(content_type,
                                             "p" = "Purchased",
-                                            "s" = "Subscribed"))
+                                            "s" = "Subscribed",
+                                            "eba" = "Evidence Based Aquisition"))
     
     # Output list
     list(
