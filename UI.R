@@ -116,7 +116,7 @@ ui <- fluidPage(
           h3("Input file requirements"),
           tags$ul(
             tags$li("All files must be in ", tags$strong(".csv format"), "."),
-            tags$li("Holdings files must contain at least one ISBN column."),
+            tags$li("Holdings files must have these columns: title, at least one but not more than two ISBN columns, and content type. The latter should be 's' for subscription, 'p' for purchased, 'eba' for evidence eased aquisition, and 'c' for complementary access."),
             tags$li("Usage reports should be standard COUNTER 5 Book Report (BR1/BR2) files
                     if coming from a publisher, or JUSP Title Report exports if using JUSP.")
             
@@ -240,5 +240,14 @@ ui <- fluidPage(
       )
     )
     
+  ),
+  tags$div(class = "footer", 
+           fluidRow(
+             column(12, 
+                    tags$a(href = 'https://doi.org/10.17028/rd.lboro.28525481', 
+                           "Accessibility Statement"),
+                    style = "text-align: right;"
+             )
+           )
   )
 )
