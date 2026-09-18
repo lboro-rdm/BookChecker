@@ -68,11 +68,15 @@ ui <- fluidPage(
         ),
         
         mainPanel(
+          h3("Preview of holding header"),
+          tableOutput("holdings_preview"),
+          
           h3("Matched Accessed Content Types"),
           DTOutput("matched_table"),
           
           h3("Unmatched Accessed Books"),
           DTOutput("unmatched_table")
+          
         )
       )
     ),

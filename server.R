@@ -9,6 +9,29 @@ server <- function(input, output, session) {
     }
   })
   
+  # Preview holdings column headings as soon as the file is picked —
+  # n_max = 0 reads only the header row, so this is instant even on a big file
+  holdings_headers <- eventReactive(input$holdings, {
+    req(input$holdings)
+    tryCatch(
+      read_csv(input$holdings$datapath, n_max = 0, col_types = cols(.default = col_character())) %>%
+        clean_names() %>%
+        names(),
+      error = function(e) {
+        showNotification(
+          paste("Could not read holdings file headers:", conditionMessage(e)),
+          type = "error", duration = NULL
+        )
+        NULL
+      }
+    )
+  })
+  
+  output$holdings_preview <- renderTable({
+    req(holdings_headers())
+    data.frame(column = holdings_headers())
+  })
+  
   df_processed <- eventReactive(input$run, {
     req(input$holdings, input$file)
     
@@ -54,17 +77,13 @@ server <- function(input, output, session) {
       .default = 14
     )
     
-    # Read and clean usage file
+    # Read and clean usage file (kept in long format — one row per isbn/metric_type)
     df_accessed <- tryCatch(
       read_csv(input$file$datapath, skip = skip_rows) %>%
         clean_names() %>%
         mutate(
           isbn = str_replace_all(isbn, "[-\\s]", ""),
           isbn = str_trim(isbn)
-        ) %>%
-        pivot_wider(
-          names_from  = metric_type,
-          values_from = reporting_period_total
         ),
       error = function(e) {
         showNotification(
@@ -80,8 +99,8 @@ server <- function(input, output, session) {
     validate(
       need("isbn" %in% names(df_accessed),
            "Usage file has no 'isbn' column after parsing — check the platform/source selection and that the file is a valid COUNTER report."),
-      need("metric_type" %in% names(df_accessed) || any(c("Total_Item_Requests", "Unique_Title_Requests") %in% names(df_accessed)),
-           "Usage file is missing expected metric columns (Total_Item_Requests / Unique_Title_Requests)."),
+      need("metric_type" %in% names(df_accessed),
+           "Usage file has no 'metric_type' column after parsing — check the platform/source selection and that the file is a valid COUNTER report."),
       need(any(input$isbn_col %in% names(df_main)),
            paste("Holdings file does not contain the selected ISBN column(s):", paste(input$isbn_col, collapse = ", ")))
     )
@@ -99,22 +118,22 @@ server <- function(input, output, session) {
       ungroup() %>%
       distinct(isbn, .keep_all = TRUE)
     
-    accessed_with_type <- df_accessed %>%
-      left_join(isbn_lookup, by = "isbn") %>%
-      group_by(isbn) %>%
-      slice_min(priority, n = 1, with_ties = FALSE) %>%
-      ungroup() %>%
+    # Join every usage row (all metric types) to its content_type
+    df_accessed_typed <- df_accessed %>%
+      left_join(isbn_lookup %>% select(isbn, content_type), by = "isbn") %>%
       mutate(accessed_content_type = recode(content_type,
                                             "p" = "Purchased",
                                             "s" = "Subscribed",
                                             "eba" = "Evidence Based Aquisition",
-                                            "c" = "Complementary access"))
-    
-    matched <- accessed_with_type %>%
-      filter(!is.na(accessed_content_type))
+                                            "c" = "Complementary access"),
+             accessed_content_type = if_else(
+               is.na(accessed_content_type) | accessed_content_type == "",
+               "Unmatched",
+               accessed_content_type
+             ))
     
     # Warn if nothing matched at all — likely an ISBN format mismatch
-    if (nrow(matched) == 0) {
+    if (all(df_accessed_typed$accessed_content_type == "Unmatched")) {
       showNotification(
         "No ISBNs from the usage file matched the holdings file. Check the ISBN zeros. Down with Excel!",
         type = "warning", duration = NULL
@@ -122,19 +141,30 @@ server <- function(input, output, session) {
     }
     
     list(
-      matched_counts = matched %>%
+      matched_counts = df_accessed_typed %>%
         group_by(accessed_content_type) %>%
         summarise(
-          row_count                    = n(),
-          total_item_requests          = sum(Total_Item_Requests, na.rm = TRUE),
-          total_unique_title_requests  = sum(Unique_Title_Requests, na.rm = TRUE),
+          unique_title_requests     = sum(metric_type == "Unique_Title_Requests"),
+          sum_unique_title_requests = sum(reporting_period_total[metric_type == "Unique_Title_Requests"], na.rm = TRUE),
+          sum_total_item_requests   = sum(reporting_period_total[metric_type == "Total_Item_Requests"], na.rm = TRUE),
           .groups = "drop"
-        ),
+        ) %>%
+        arrange(accessed_content_type == "Unmatched", accessed_content_type),
       
-      unmatched_accessed = accessed_with_type %>%
-        filter(is.na(accessed_content_type)) %>%
-        select(title, isbn, yop) %>%
-        distinct(isbn, yop, .keep_all = TRUE)
+      unmatched_accessed = df_accessed_typed %>%
+        filter(accessed_content_type == "Unmatched",
+               metric_type %in% c("Unique_Title_Requests", "Total_Item_Requests")) %>%
+        select(title, isbn, yop, doi, metric_type, reporting_period_total) %>%
+        distinct(title, isbn, yop, doi, metric_type, .keep_all = TRUE) %>%
+        pivot_wider(
+          names_from  = metric_type,
+          values_from = reporting_period_total,
+          values_fn   = ~ sum(.x, na.rm = TRUE)
+        ) %>%
+        mutate(
+          doi = if_else(!is.na(doi) & doi != "", paste0("https://doi.org/", doi), doi)
+        ) %>%
+        select(title, isbn, yop, doi, any_of(c("Unique_Title_Requests", "Total_Item_Requests")))
     )
   })
   
@@ -145,7 +175,15 @@ server <- function(input, output, session) {
   
   output$unmatched_table <- renderDT({
     req(df_processed())
-    datatable(df_processed()$unmatched_accessed)
+    display_df <- df_processed()$unmatched_accessed %>%
+      mutate(
+        doi = if_else(
+          !is.na(doi) & doi != "",
+          paste0('<a href="', doi, '" target="_blank" rel="noopener noreferrer">', doi, '</a>'),
+          doi
+        )
+      )
+    datatable(display_df, escape = FALSE)
   })
   
   observe({
